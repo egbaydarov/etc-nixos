@@ -10,16 +10,8 @@
       "${builtins.fetchGit {url=https://github.com/NixOS/nixos-hardware.git;rev="11f2d9ea49c3e964315215d6baa73a8d42672f06";}}/lenovo/legion/16aph8"
     ];
 
-
-
+  services.xserver.videoDrivers = [ "nvidia" ];
   boot.initrd.availableKernelModules = [ "nvme" "xhci_pci" "usb_storage" "usbhid" "sd_mod" ];
-  boot.initrd.kernelModules = [ ];
-  boot.kernelModules = [ "kvm-amd" ];
-  boot.extraModulePackages = [ ];
-  boot.kernelParams = [
-    "video=HDMI-1:e"
-  ];
-
   fileSystems."/" =
     { device = "/dev/disk/by-uuid/3a1b5153-6ae3-4d38-92f3-26d47788e5df";
       fsType = "xfs";

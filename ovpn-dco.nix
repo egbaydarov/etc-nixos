@@ -2,13 +2,13 @@
 
 stdenv.mkDerivation rec {
   pname = "ovpn-dco";
-  version = "0.2.20241216";
+  version = "0.2.20250523";
 
   src = fetchFromGitHub {
     owner = "OpenVPN";
     repo = "ovpn-dco";
     rev = "v${version}";
-    sha256 = "sha256-Ifgo9dDNgjMxO6LQBSLuz2kWhP8cOkbdbWTHDuMVLzI=";
+    sha256 = "sha256-M8rTunf1jSAHnwjHIC73J+noGetTijd0opdbTGynJVg=";
   };
 
   nativeBuildInputs = kernel.moduleBuildDependencies;

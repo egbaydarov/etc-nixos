@@ -1,12 +1,36 @@
 { config, lib, pkgs, ... }:
 let 
   masterSrc = fetchTarball {
-    url = "https://github.com/NixOS/nixpkgs/archive/master.tar.gz";
-    sha256 = "1d1by1zy2jy0yi3kdj4a224ar2cv4s9sjssbv024rdlrjd3lc05p";
+    url = "https://github.com/NixOS/nixpkgs/archive/refs/tags/25.05.tar.gz";
+    sha256 = "1915r28xc4znrh2vf4rrjnxldw2imysz819gzhk9qlrkqanmfsxd";
   };
   nixpkgsMaster = import masterSrc {
     config.allowUnfree = true;
   };
+  yubico = pkgs.stdenv.mkDerivation {
+    name = "authenticator";
+
+    src = fetchTarball {
+      url = "https://s3.byda.io/okolo-images/public-reads/yubico-authenticator-7.2.0-linux.tar.gz";
+      sha256 = "10l3ixgnalm04jvx22qs9mmysqk2iq64vkkadlk3di2lhln8n6kw";
+    };
+    dontBuild = true;
+    installPhase = ''
+      mkdir -p $out/bin
+      cp -v authenticator $out/bin/
+      chmod +x $out/bin/authenticator
+    '';
+  };
+  twitchnotif = (pkgs.buildGoModule {
+    name = "lf";
+    src = pkgs.fetchFromGitHub {
+      owner = "egbaydarov";
+      repo = "twitch-notif-shit";
+      rev = "master";
+      sha256 = "0m2fzpqxk7hrbxsgqplkg7h2p7gv6s1miymv3gvw0cz039skag0s";
+    };
+    vendorHash = "sha256-DYReTxH4SHnJERbiE6rOp5XqzN3NRbICt5iNeX8Jgt8=";
+  });
 in
 {
   imports =
@@ -19,21 +43,50 @@ in
     dates = "05:00:00";
     options = "--delete-older-than 7d";
   };
-  #boot.kernelPackages = pkgs.linuxPackages_6_12;
-  #boot.kernelPackages = pkgs.linuxPackages_latest;
-  boot.kernelPackages = nixpkgsMaster.linuxPackagesFor (nixpkgsMaster.linux_6_14.override {
-    argsOverride = rec {
-      src = pkgs.fetchurl {
-            url = "https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.14.8.tar.xz";
-            sha256 = "sha256-YrEuzTB1o1frMgk1ZX3oTgFVKANxfa04P6fMOqSqKQU=";
+  services.upower.enable = true;
+  services.keyd = {
+    enable = true;
+    keyboards = {
+      default = {
+        ids = [ "*" ];
+        settings = {
+          main = {
+            capslock = "backspace";
+            "leftmeta+leftshift+f23" = "rightmeta";
+          };
+        };
       };
-      version = "6.14.8";
-      modDirVersion = "6.14.8";
-      };
-  });
+    };
+  };
+  boot.kernelParams = [ "vt.global_cursor_default=0" "consoleblank=0" "amdgpu.sg_display=0" ];
+  #boot.kernelPackages = pkgs.linuxPackages_6_15;
+  boot.kernelPackages = nixpkgsMaster.linuxPackages_latest;
+  #boot.kernelPackages = nixpkgsMaster.linuxPackagesFor (nixpkgsMaster.linux_6_14.override {
+  #  argsOverride = rec {
+  #      src = pkgs.fetchurl {
+  #            url = "https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.14.8.tar.xz";
+  #            sha256 = "sha256-YrEuzTB1o1frMgk1ZX3oTgFVKANxfa04P6fMOqSqKQU=";
+  #      };
+  #      version = "6.14.8";
+  #      modDirVersion = "6.14.8";
+  #    };
+  #});
 
-  hardware.graphics.enable = true;
-  hardware.graphics.extraPackages = [ pkgs.mesa.drivers ];
+  services.pcscd.enable = true;
+  programs.gnupg.agent = {
+    enable = true;
+    enableSSHSupport = true;
+  };
+  services.logind = {
+      lidSwitch = "ignore";
+      lidSwitchDocked = "ignore";
+      lidSwitchExternalPower = "ignore";
+      extraConfig = ''
+        IdleAction=ignore
+        HandlePowerKey=ignore
+        HandleSuspendKey=ignore
+      '';
+  };
   time.timeZone = "Europe/Belgrade";
 
   programs.hyprland.enable = true;
@@ -45,30 +98,43 @@ in
   boot.loader.timeout = null;
 
   i18n.defaultLocale = "en_US.UTF-8";
-  services.logind.lidSwitchExternalPower = "ignore";
 
-  fonts.packages = with pkgs; [
-    (nerdfonts.override { fonts = [ "JetBrainsMono" "FiraCode" "ZedMono" ]; })
+  fonts.packages = with nixpkgsMaster; [
+    nerd-fonts.jetbrains-mono
+    nerd-fonts.fira-code
+    nerd-fonts.zed-mono
   ];
+  environment.sessionVariables = {
+    # forces wayland in some apps (Electron, Chrome)
+    NIXOS_OZONE_WL = "1";
+    ELECTRON_OZONE_PLATFORM_HINT = "auto";
+    __NV_PRIME_RENDER_OFFLOAD = "1";
+    __GLX_VENDOR_LIBRARY_NAME = "nvidia";
+  };
   environment.systemPackages = [
-    pkgs.clang-tools
-    pkgs.clang
-    pkgs.cmake
-    pkgs.git
-    pkgs.lm_sensors
-    pkgs.brightnessctl
-    pkgs.fuzzel
-    pkgs.wl-clipboard
-    pkgs.hyprpaper
-    pkgs.pulseaudio
+    nixpkgsMaster.clang-tools
+    nixpkgsMaster.clang
+    nixpkgsMaster.cmake
+    nixpkgsMaster.git
+    nixpkgsMaster.lm_sensors
+    nixpkgsMaster.brightnessctl
+    nixpkgsMaster.fuzzel
+    nixpkgsMaster.hyprpaper
+    nixpkgsMaster.mesa
+    nixpkgsMaster.gimp3
+
+    nixpkgsMaster.hyprshot
+    nixpkgsMaster.pulseaudio
+    nixpkgsMaster.hyprcursor
+    nixpkgsMaster.waybar
+
+    #gpg
+    nixpkgsMaster.pinentry-curses
 
     nixpkgsMaster.fuzzel
     nixpkgsMaster.wl-clipboard
-    nixpkgsMaster.hyprshot
     nixpkgsMaster.wezterm
-    nixpkgsMaster.chromium
     nixpkgsMaster.cliphist
-    nixpkgsMaster.hyprcursor
     nixpkgsMaster.mako
     nixpkgsMaster.xcur2png
   ];
@@ -77,7 +143,13 @@ in
     enable = true;
     defaultEditor = true;
   };
+  programs.hyprlock.enable = true;
+  security = {
+    polkit.enable = true;
+    pam.services.hyprlock = {};
+  };
   security.rtkit.enable = true;
+  services.gnome.gnome-keyring.enable = true;
   services.pipewire = {
     enable = true;
     alsa.enable = true;
@@ -85,102 +157,164 @@ in
     pulse.enable = true;
   };
   nixpkgs.config.allowUnfree = true;
+  users.users = {
+    boogie = {
+      isNormalUser = true;
+      packages = with nixpkgsMaster; [];
+    };
+
+    byda = {
+      isNormalUser = true;
+      packages = with nixpkgsMaster; [];
+    };
+  };
 
   specialisation = {
-    mancala = {
+
+    boogie = {
       inheritParentConfig = true;
       configuration = {
-        system.nixos.tags = [ "mancala" ];
-        networking.hostName = "nixos-mancala";
+        environment.systemPackages = with nixpkgsMaster; [
+          chromium
+        ];
+        virtualisation.docker = {
+          rootless = {
+            enable = true;
+            setSocketVariable = true;
+          };
+          enable = true;
+          daemon.settings = {
+            data-root = "/home/boogie/.docker/data";
+          };
+        };
+        system.nixos.tags = [ "boogie" ];
+        networking.hostName = "nixos-boogie";
         boot.extraModulePackages = with config.boot.kernelPackages; [
           (nixpkgsMaster.callPackage ./ovpn-dco.nix { kernel = config.boot.kernelPackages.kernel; })
         ];
         boot.kernelModules = [ "ovpn-dco-v2" ];
+        services.greetd = {
+          enable = true;
+          settings = rec {
+            initial_session = {
+              command = "Hyprland";
+              user = "boogie";
+            };
+            default_session = initial_session;
+          };
+        };
         services.openvpn.servers = {
           intraVPN = {
             autoStart = true;
             config = ''
-              config /home/mancala/mancala/openvpn/intra.ovpn
-              auth-user-pass /home/mancala/mancala/openvpn/iamdumb.txt
+              config /home/boogie/openvpn/intra.ovpn
+              auth-user-pass /home/boogie/openvpn/iamdumb.txt
             '';
             updateResolvConf = true;
           };
           projectsVPN = {
             autoStart = true;
             config = ''
-              config /home/mancala/mancala/openvpn/projects.ovpn
-              auth-user-pass /home/mancala/mancala/openvpn/iamdumb.txt
+              config /home/boogie/openvpn/projects.ovpn
+              auth-user-pass /home/boogie/openvpn/iamdumb.txt
             '';
             updateResolvConf = true;
           };
           whiteVPN = {
             autoStart = true;
             config = ''
-              config /home/mancala/mancala/openvpn/white.ovpn
-              auth-user-pass /home/mancala/mancala/openvpn/iamdumb.txt
+              config /home/boogie/openvpn/white.ovpn
+              auth-user-pass /home/boogie/openvpn/iamdumb.txt
             '';
             updateResolvConf = true;
           };
         };
+        users.extraGroups.docker.members = [ "boogie" ];
         security.sudo.extraRules = [
           {
-            users = [ "mancala" ];
+            users = [ "boogie" ];
             commands = [{command = "ALL"; options = ["NOPASSWD"];}];
           }
         ];
-        users.users.mancala = {
-          isNormalUser = true;
-          packages = with pkgs; [];
-        };
         security.pki.certificateFiles = [
-          /home/mancala/mancala/certs/OLANrootCA
-          /home/mancala/mancala/certs/OLANroot.crt
-          /home/mancala/mancala/certs/RCA-CA
-          /home/mancala/mancala/certs/RCA-CA.crt
-          /home/mancala/mancala/certs/office-SUB-CA.crt
+          /home/boogie/certs/OLANrootCA
+          /home/boogie/certs/OLANroot.crt
+          /home/boogie/certs/RCA-CA
+          /home/boogie/certs/RCA-CA.crt
+          /home/boogie/certs/office-SUB-CA.crt
         ];
       };
     };
 
-
-    byda_streamer = {
+    byda = {
       inheritParentConfig = true;
       configuration = {
+        virtualisation.docker = {
+          rootless = {
+            enable = true;
+            setSocketVariable = true;
+          };
+          enable = true;
+          daemon.settings = {
+            data-root = "/home/byda/.docker/data";
+          };
+        };
+        programs.obs-studio = {
+          enable = true;
+          plugins =  with pkgs.obs-studio-plugins; [
+            obs-ndi
+            wlrobs
+          ];
+        };
         system.nixos.tags = [ "byda" ];
+        environment.systemPackages = with nixpkgsMaster; [
+          yubico
+          v4l-utils
+          firefox
+        ];
         networking.hostName = "nixos-dude";
+        networking.wg-quick.interfaces.wgokolo.configFile = "/etc/nixos/wg/okolo.conf";
+        networking.wg-quick.interfaces.wgvisi.configFile = "/etc/nixos/wg/visi.conf";
+        #networking.wg-quick.interfaces.wgru.configFile = "/etc/nixos/wg/fbru.conf";
+        #networking.wg-quick.interfaces.wgus.configFile = "/etc/nixos/wg/us.conf";
+        networking.firewall = {
+          enable = true;
+          allowedUDPPorts = [ 5960 5961 5962 5963 5964 5965 5966 5966 5967 5968 5969 5970 8000 ];
+          allowedTCPPorts = [ 5960 5961 5962 5963 5964 5965 5966 5966 5967 5968 5969 5970 8000 ];
+          allowPing = true;
+        };
+        services.avahi = {
+          enable = true;
+          nssmdns4 = true;
+          publish.enable = true;
+          publish.userServices = true;
+        };
+        services.pcscd.enable = true;
+        services.greetd = {
+          enable = true;
+          settings = rec {
+            initial_session = {
+              command = "Hyprland";
+              user = "byda";
+            };
+            default_session = initial_session;
+          };
+        };
         security.sudo.extraRules = [
           {
             users = [ "byda" ];
             commands = [{command = "ALL"; options = ["NOPASSWD"];}];
           }
         ];
-        users.users.byda = {
-          isNormalUser = true;
-          packages = with pkgs; [];
-        };
       };
     };
   };
 
-
-  # Some programs need SUID wrappers, can be configured further or are
-  # started in user sessions.
-  # programs.mtr.enable = true;
-  # programs.gnupg.agent = {
-  #   enable = true;
-  #   enableSSHSupport = true;
-  # };
-
-  # List services that you want to enable:
-
-  # Enable the OpenSSH daemon.
-  # services.openssh.enable = true;
-
-  # Open ports in the firewall.
-  # networking.firewall.allowedTCPPorts = [ ... ];
+  # networking.networkmanager.enable = true;
   # networking.firewall.allowedUDPPorts = [ ... ];
   # Or disable the firewall altogether.
   # networking.firewall.enable = false;
+
 
   # Copy the NixOS configuration file and link it from the resulting system
   # (/run/current-system/configuration.nix). This is useful in case you
@@ -204,5 +338,5 @@ in
   # and migrated your data accordingly.
   #
   # For more information, see `man configuration.nix` or https://nixos.org/manual/nixos/stable/options#opt-system.stateVersion .
-  system.stateVersion = "24.11"; # Did you read the comment?
+  system.stateVersion = "24.11";
 }
