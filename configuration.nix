@@ -21,16 +21,6 @@ let
       chmod +x $out/bin/authenticator
     '';
   };
-  twitchnotif = (pkgs.buildGoModule {
-    name = "lf";
-    src = pkgs.fetchFromGitHub {
-      owner = "egbaydarov";
-      repo = "twitch-notif-shit";
-      rev = "master";
-      sha256 = "0m2fzpqxk7hrbxsgqplkg7h2p7gv6s1miymv3gvw0cz039skag0s";
-    };
-    vendorHash = "sha256-DYReTxH4SHnJERbiE6rOp5XqzN3NRbICt5iNeX8Jgt8=";
-  });
 in
 {
   imports =
