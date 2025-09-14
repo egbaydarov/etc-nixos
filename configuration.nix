@@ -1,25 +1,11 @@
 { config, lib, pkgs, ... }:
-let 
-  masterSrc = fetchTarball {
+let
+  packages2505 = fetchTarball {
     url = "https://github.com/NixOS/nixpkgs/archive/refs/tags/25.05.tar.gz";
     sha256 = "1915r28xc4znrh2vf4rrjnxldw2imysz819gzhk9qlrkqanmfsxd";
   };
-  nixpkgsMaster = import masterSrc {
+  pkgs2505 = import packages2505 {
     config.allowUnfree = true;
-  };
-  yubico = pkgs.stdenv.mkDerivation {
-    name = "authenticator";
-
-    src = fetchTarball {
-      url = "https://s3.byda.io/okolo-images/public-reads/yubico-authenticator-7.2.0-linux.tar.gz";
-      sha256 = "10l3ixgnalm04jvx22qs9mmysqk2iq64vkkadlk3di2lhln8n6kw";
-    };
-    dontBuild = true;
-    installPhase = ''
-      mkdir -p $out/bin
-      cp -v authenticator $out/bin/
-      chmod +x $out/bin/authenticator
-    '';
   };
 in
 {
@@ -27,6 +13,7 @@ in
     [
       ./hardware-configuration-legion.nix
     ];
+  nix.settings.experimental-features = [ "nix-command" "flakes" ];
   nix.gc = {
     automatic = true;
     persistent = true;
@@ -49,9 +36,10 @@ in
     };
   };
   boot.kernelParams = [ "vt.global_cursor_default=0" "consoleblank=0" "amdgpu.sg_display=0" ];
+
+  boot.kernelPackages = pkgs2505.linuxPackages_latest;
   #boot.kernelPackages = pkgs.linuxPackages_6_15;
-  boot.kernelPackages = nixpkgsMaster.linuxPackages_latest;
-  #boot.kernelPackages = nixpkgsMaster.linuxPackagesFor (nixpkgsMaster.linux_6_14.override {
+  #boot.kernelPackages = pkgs2505.linuxPackagesFor (pkgs2505.linux_6_14.override {
   #  argsOverride = rec {
   #      src = pkgs.fetchurl {
   #            url = "https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.14.8.tar.xz";
@@ -61,7 +49,6 @@ in
   #      modDirVersion = "6.14.8";
   #    };
   #});
-
   services.pcscd.enable = true;
   programs.gnupg.agent = {
     enable = true;
@@ -89,7 +76,7 @@ in
 
   i18n.defaultLocale = "en_US.UTF-8";
 
-  fonts.packages = with nixpkgsMaster; [
+  fonts.packages = with pkgs2505; [
     nerd-fonts.jetbrains-mono
     nerd-fonts.fira-code
     nerd-fonts.zed-mono
@@ -101,32 +88,43 @@ in
     __NV_PRIME_RENDER_OFFLOAD = "1";
     __GLX_VENDOR_LIBRARY_NAME = "nvidia";
   };
-  environment.systemPackages = [
-    nixpkgsMaster.clang-tools
-    nixpkgsMaster.clang
-    nixpkgsMaster.cmake
-    nixpkgsMaster.git
-    nixpkgsMaster.lm_sensors
-    nixpkgsMaster.brightnessctl
-    nixpkgsMaster.fuzzel
-    nixpkgsMaster.hyprpaper
-    nixpkgsMaster.mesa
-    nixpkgsMaster.gimp3
 
-    nixpkgsMaster.hyprshot
-    nixpkgsMaster.pulseaudio
-    nixpkgsMaster.hyprcursor
-    nixpkgsMaster.waybar
+  environment.systemPackages = [
+    (import ./cursor.nix { 
+      pkgs = pkgs2505;
+      lib  = pkgs2505.lib;
+    })
+
+    pkgs2505.clang-tools
+    pkgs2505.yubikey-manager
+    pkgs2505.yubioath-flutter
+
+    pkgs2505.clang
+    pkgs2505.cmake
+    pkgs2505.git
+    pkgs2505.lm_sensors
+    pkgs2505.brightnessctl
+    pkgs2505.wpa_supplicant
+    pkgs2505.fuzzel
+    pkgs2505.hyprpaper
+    pkgs2505.mesa
+    pkgs2505.gimp3
+    pkgs2505.ripgrep
+
+    pkgs2505.hyprshot
+    pkgs2505.pulseaudio
+    pkgs2505.hyprcursor
+    pkgs2505.waybar
 
     #gpg
-    nixpkgsMaster.pinentry-curses
+    pkgs2505.pinentry-curses
 
-    nixpkgsMaster.fuzzel
-    nixpkgsMaster.wl-clipboard
-    nixpkgsMaster.wezterm
-    nixpkgsMaster.cliphist
-    nixpkgsMaster.mako
-    nixpkgsMaster.xcur2png
+    pkgs2505.fuzzel
+    pkgs2505.wl-clipboard
+    pkgs2505.wezterm
+    pkgs2505.cliphist
+    pkgs2505.mako
+    pkgs2505.xcur2png
   ];
   services.libinput.enable = true;
   programs.neovim = {
@@ -150,12 +148,12 @@ in
   users.users = {
     boogie = {
       isNormalUser = true;
-      packages = with nixpkgsMaster; [];
+      packages = with pkgs2505; [];
     };
 
     byda = {
       isNormalUser = true;
-      packages = with nixpkgsMaster; [];
+      packages = with pkgs2505; [];
     };
   };
 
@@ -164,8 +162,9 @@ in
     boogie = {
       inheritParentConfig = true;
       configuration = {
-        environment.systemPackages = with nixpkgsMaster; [
-          chromium
+        environment.systemPackages = [
+          pkgs2505.chromium
+          pkgs2505.jq
         ];
         virtualisation.docker = {
           rootless = {
@@ -179,8 +178,14 @@ in
         };
         system.nixos.tags = [ "boogie" ];
         networking.hostName = "nixos-boogie";
+        networking.firewall = {
+          enable = true;
+          allowedUDPPorts = [ 8888 ];
+          allowedTCPPorts = [ 5960 5961 5962 5963 5964 5965 5966 5966 5967 5968 5969 5970 8000 ];
+          allowPing = true;
+        };
         boot.extraModulePackages = with config.boot.kernelPackages; [
-          (nixpkgsMaster.callPackage ./ovpn-dco.nix { kernel = config.boot.kernelPackages.kernel; })
+          (pkgs2505.callPackage ./ovpn-dco.nix { kernel = config.boot.kernelPackages.kernel; })
         ];
         boot.kernelModules = [ "ovpn-dco-v2" ];
         services.greetd = {
@@ -195,28 +200,28 @@ in
         };
         services.openvpn.servers = {
           intraVPN = {
+            updateResolvConf = true;
             autoStart = true;
             config = ''
               config /home/boogie/openvpn/intra.ovpn
               auth-user-pass /home/boogie/openvpn/iamdumb.txt
             '';
-            updateResolvConf = true;
           };
           projectsVPN = {
+            updateResolvConf = true;
             autoStart = true;
             config = ''
               config /home/boogie/openvpn/projects.ovpn
               auth-user-pass /home/boogie/openvpn/iamdumb.txt
             '';
-            updateResolvConf = true;
           };
           whiteVPN = {
-            autoStart = true;
+            updateResolvConf = true;
+            autoStart = false;
             config = ''
               config /home/boogie/openvpn/white.ovpn
               auth-user-pass /home/boogie/openvpn/iamdumb.txt
             '';
-            updateResolvConf = true;
           };
         };
         users.extraGroups.docker.members = [ "boogie" ];
@@ -257,8 +262,7 @@ in
           ];
         };
         system.nixos.tags = [ "byda" ];
-        environment.systemPackages = with nixpkgsMaster; [
-          yubico
+        environment.systemPackages = with pkgs2505; [
           v4l-utils
           firefox
         ];
@@ -300,7 +304,7 @@ in
     };
   };
 
-  # networking.networkmanager.enable = true;
+  networking.networkmanager.enable = true;
   # networking.firewall.allowedUDPPorts = [ ... ];
   # Or disable the firewall altogether.
   # networking.firewall.enable = false;
