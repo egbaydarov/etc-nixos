@@ -1,10 +1,10 @@
 { lib, pkgs }:
 pkgs.appimageTools.wrapType2 {
   pname = "cursor";
-  version = "1.5.11";
+  version = "2.0.34";
   src = pkgs.fetchurl {
-    url = "https://downloads.cursor.com/production/2f2737de9aa376933d975ae30290447c910fdf46/linux/x64/Cursor-1.5.11-x86_64.AppImage";
-    sha256 = "sha256-PlZPgcDe6KmEcQYDk1R4uXh1R34mKuPLBh/wbOAYrAY=";
+    url = "https://downloads.cursor.com/production/45fd70f3fe72037444ba35c9e51ce86a1977ac11/linux/x64/Cursor-2.0.34-x86_64.AppImage";
+    sha256 = "sha256-x51N2BttMkfKwH4/Uxn/ZNFVPZbaNdsZm8BFFIMmxBM=";
   };
 
   # Electron garbage

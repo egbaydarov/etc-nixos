@@ -6,6 +6,16 @@ let
   };
   pkgs2505 = import packages2505 {
     config.allowUnfree = true;
+    config.chromium.enableWideVine = true;
+  };
+  packagesUnstable = fetchTarball {
+    url = "https://github.com/NixOS/nixpkgs/archive/refs/heads/nixos-unstable.tar.gz"; # Or the URL to the unstable branch or commit
+    sha256 = "117mzxz0a0r01nvmykdrvgfnxh1vwgg8rj2p0v3v1as1kp7ywxdd";
+  };
+
+  pkgsUnstable = import packagesUnstable {
+    config.allowUnfree = true;
+    config.chromium.enableWideVine = true;
   };
 in
 {
@@ -30,6 +40,7 @@ in
           main = {
             capslock = "backspace";
             "leftmeta+leftshift+f23" = "rightmeta";
+            "102nd" = "leftshift";
           };
         };
       };
@@ -55,14 +66,18 @@ in
     enableSSHSupport = true;
   };
   services.logind = {
-      lidSwitch = "ignore";
-      lidSwitchDocked = "ignore";
-      lidSwitchExternalPower = "ignore";
-      extraConfig = ''
-        IdleAction=ignore
-        HandlePowerKey=ignore
-        HandleSuspendKey=ignore
-      '';
+      settings = {
+        Login = {
+          HandleLidSwitchDocked = "ignore";
+          HandleLidSwitchExternalPower = "ignore";
+          HandleLidSwitch = "ignore";
+          ExtraConfig = ''
+              IdleAction=ignore
+              HandlePowerKey=ignore
+              HandleSuspendKey=ignore
+          '';
+        };
+      };
   };
   time.timeZone = "Europe/Belgrade";
 
@@ -89,12 +104,18 @@ in
     __GLX_VENDOR_LIBRARY_NAME = "nvidia";
   };
 
-  environment.systemPackages = [
+  environment.systemPackages =
+  let
+    zen-browser = (import (builtins.fetchTarball "https://github.com/youwen5/zen-browser-flake/archive/master.tar.gz") {
+      pkgs = pkgs2505;
+    }).default;
+  in
+  [
     (import ./cursor.nix { 
       pkgs = pkgs2505;
       lib  = pkgs2505.lib;
     })
-
+    zen-browser
     pkgs2505.clang-tools
     pkgs2505.yubikey-manager
     pkgs2505.yubioath-flutter
@@ -163,7 +184,7 @@ in
       inheritParentConfig = true;
       configuration = {
         environment.systemPackages = [
-          pkgs2505.chromium
+          pkgsUnstable.chromium
           pkgs2505.jq
         ];
         virtualisation.docker = {
@@ -257,7 +278,7 @@ in
         programs.obs-studio = {
           enable = true;
           plugins =  with pkgs.obs-studio-plugins; [
-            obs-ndi
+            distroav
             wlrobs
           ];
         };
