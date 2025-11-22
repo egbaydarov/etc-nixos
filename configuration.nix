@@ -147,6 +147,7 @@ in
 
     pkgs2505.fuzzel
     pkgs2505.wl-clipboard
+    pkgs2505.kitty
     pkgsUnstable.wezterm
     pkgs2505.cliphist
     pkgs2505.mako
@@ -171,6 +172,7 @@ in
     alsa.support32Bit = true;
     pulse.enable = true;
   };
+
   nixpkgs.config.allowUnfree = true;
   users.users = {
     boogie = {
