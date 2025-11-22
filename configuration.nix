@@ -9,10 +9,9 @@ let
     config.chromium.enableWideVine = true;
   };
   packagesUnstable = fetchTarball {
-    url = "https://github.com/NixOS/nixpkgs/archive/refs/heads/nixos-unstable.tar.gz"; # Or the URL to the unstable branch or commit
-    sha256 = "117mzxz0a0r01nvmykdrvgfnxh1vwgg8rj2p0v3v1as1kp7ywxdd";
+    url = "https://github.com/NixOS/nixpkgs/archive/3c274c4258d70f3eff1a65379111e60aa43a09bc.tar.gz";
+    sha256 = "0mrv3ydbq7chhkddb8v6pydq9z71abp9bxwggn6v08m622vzsqnj";
   };
-
   pkgsUnstable = import packagesUnstable {
     config.allowUnfree = true;
     config.chromium.enableWideVine = true;
@@ -111,6 +110,9 @@ in
     }).default;
   in
   [
+    pkgs2505.go
+    pkgs2505.gopls
+    pkgs2505.nodejs_20
     (import ./cursor.nix { 
       pkgs = pkgs2505;
       lib  = pkgs2505.lib;
@@ -130,7 +132,10 @@ in
     pkgs2505.hyprpaper
     pkgs2505.mesa
     pkgs2505.gimp3
+
     pkgs2505.ripgrep
+    pkgs2505.fd
+    pkgs2505.fzf
 
     pkgs2505.hyprshot
     pkgs2505.pulseaudio
@@ -142,10 +147,11 @@ in
 
     pkgs2505.fuzzel
     pkgs2505.wl-clipboard
-    pkgs2505.wezterm
+    pkgsUnstable.wezterm
     pkgs2505.cliphist
     pkgs2505.mako
     pkgs2505.xcur2png
+    pkgs2505.lua-language-server
   ];
   services.libinput.enable = true;
   programs.neovim = {
@@ -178,11 +184,28 @@ in
     };
   };
 
+  nix.extraOptions = ''
+    extra-sandbox-paths = /var/cache/clickhouse-sccache
+  '';
+
   specialisation = {
 
     boogie = {
       inheritParentConfig = true;
       configuration = {
+        networking.extraHosts =
+        ''
+          127.0.0.1 kafka-1
+          127.0.0.1 kafka-2
+          127.0.0.1 kafka-3
+          127.0.0.1 clickhouse-1-replica
+          127.0.0.1 clickhouse-1
+          127.0.0.1 clickhouse-2-replica
+          127.0.0.1 clickhouse-2
+          127.0.0.1 clickhouse-3-replica
+          127.0.0.1 clickhouse-3
+          127.0.0.1 clickhouse-zookeeper
+        '';
         environment.systemPackages = [
           pkgsUnstable.chromium
           pkgs2505.jq
@@ -224,24 +247,24 @@ in
             updateResolvConf = true;
             autoStart = true;
             config = ''
-              config /home/boogie/openvpn/intra.ovpn
-              auth-user-pass /home/boogie/openvpn/iamdumb.txt
+              config /etc/nixos/ovpn/intra.ovpn
+              auth-user-pass /etc/nixos/ovpn/iamdumb.txt
             '';
           };
           projectsVPN = {
             updateResolvConf = true;
             autoStart = true;
             config = ''
-              config /home/boogie/openvpn/projects.ovpn
-              auth-user-pass /home/boogie/openvpn/iamdumb.txt
+              config /etc/nixos/ovpn/projects.ovpn
+              auth-user-pass /etc/nixos/ovpn/iamdumb.txt
             '';
           };
           whiteVPN = {
             updateResolvConf = true;
             autoStart = false;
             config = ''
-              config /home/boogie/openvpn/white.ovpn
-              auth-user-pass /home/boogie/openvpn/iamdumb.txt
+              config /etc/nixos/ovpn/white.ovpn
+              auth-user-pass /etc/nixos/ovpn/iamdumb.txt
             '';
           };
         };
@@ -253,9 +276,7 @@ in
           }
         ];
         security.pki.certificateFiles = [
-          /home/boogie/certs/OLANrootCA
           /home/boogie/certs/OLANroot.crt
-          /home/boogie/certs/RCA-CA
           /home/boogie/certs/RCA-CA.crt
           /home/boogie/certs/office-SUB-CA.crt
         ];
