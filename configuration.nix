@@ -113,6 +113,11 @@ in
     pkgs2505.go
     pkgs2505.gopls
     pkgs2505.nodejs_20
+    (import ./easy-dotnet.nix {
+      buildDotnetGlobalTool = pkgs2505.buildDotnetGlobalTool;
+      dotnetCorePackages = pkgs2505.dotnetCorePackages;
+      lib  = pkgs2505.lib;
+    })
     (import ./cursor.nix { 
       pkgs = pkgs2505;
       lib  = pkgs2505.lib;
@@ -245,27 +250,27 @@ in
           };
         };
         services.openvpn.servers = {
-          intraVPN = {
+          iVPN = {
             updateResolvConf = true;
             autoStart = true;
             config = ''
-              config /etc/nixos/ovpn/intra.ovpn
+              config /etc/nixos/ovpn/i.ovpn
               auth-user-pass /etc/nixos/ovpn/iamdumb.txt
             '';
           };
-          projectsVPN = {
+          pVPN = {
             updateResolvConf = true;
             autoStart = true;
             config = ''
-              config /etc/nixos/ovpn/projects.ovpn
+              config /etc/nixos/ovpn/p.ovpn
               auth-user-pass /etc/nixos/ovpn/iamdumb.txt
             '';
           };
-          whiteVPN = {
+          whVPN = {
             updateResolvConf = true;
             autoStart = false;
             config = ''
-              config /etc/nixos/ovpn/white.ovpn
+              config /etc/nixos/ovpn/wh.ovpn
               auth-user-pass /etc/nixos/ovpn/iamdumb.txt
             '';
           };
