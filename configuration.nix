@@ -21,7 +21,35 @@ in
   imports =
     [
       ./hardware-configuration-legion.nix
+      "${builtins.fetchTarball "https://github.com/ryantm/agenix/archive/fcdea223397448d35d9b31f798479227e80183f6.tar.gz"}/modules/age.nix"
     ];
+
+  age = {
+    identityPaths = [ 
+      "/root/.ssh/id_ed25519"
+    ];
+    secrets = {
+      ovpnpass = {
+        file = /root/ovpnpass.age;
+      };
+      wgokolo = {
+        file = /root/wgokolo.age;
+      };
+      wgvisi = {
+        file = /root/wgvisi.age;
+      };
+      ivpn = {
+        file = /root/i.age;
+      };
+      pvpn = {
+        file = /root/p.age;
+      };
+      whvpn = {
+        file = /root/wh.age;
+      };
+    };
+  };
+
   nix.settings.experimental-features = [ "nix-command" "flakes" ];
   nix.gc = {
     automatic = true;
@@ -145,6 +173,7 @@ in
       pkgs = pkgs2505;
       lib  = pkgs2505.lib;
     })
+    (pkgs.callPackage "${builtins.fetchTarball "https://github.com/ryantm/agenix/archive/fcdea223397448d35d9b31f798479227e80183f6.tar.gz"}/pkgs/agenix.nix" {})
     zen-browser
     pkgs2505.clang-tools
     pkgs2505.yubikey-manager
@@ -273,34 +302,28 @@ in
             updateResolvConf = true;
             autoStart = true;
             config = ''
-              config /etc/nixos/ovpn/i.ovpn
-              auth-user-pass /etc/nixos/ovpn/iamdumb.txt
+              config ${config.age.secrets.ivpn.path}
+              auth-user-pass ${config.age.secrets.ovpnpass.path}
             '';
           };
           pVPN = {
             updateResolvConf = true;
             autoStart = true;
             config = ''
-              config /etc/nixos/ovpn/p.ovpn
-              auth-user-pass /etc/nixos/ovpn/iamdumb.txt
+              config ${config.age.secrets.pvpn.path}
+              auth-user-pass ${config.age.secrets.ovpnpass.path}
             '';
           };
           whVPN = {
             updateResolvConf = true;
             autoStart = false;
             config = ''
-              config /etc/nixos/ovpn/wh.ovpn
-              auth-user-pass /etc/nixos/ovpn/iamdumb.txt
+              config ${config.age.secrets.whvpn.path}
+              auth-user-pass ${config.age.secrets.ovpnpass.path}
             '';
           };
         };
         users.extraGroups.docker.members = [ "boogie" ];
-        security.sudo.extraRules = [
-          {
-            users = [ "boogie" ];
-            commands = [{command = "ALL"; options = ["NOPASSWD"];}];
-          }
-        ];
         security.pki.certificateFiles = [
           /home/boogie/certs/OLANroot.crt
           /home/boogie/certs/RCA-CA.crt
@@ -334,10 +357,8 @@ in
           v4l-utils
         ];
         networking.hostName = "nixos-dude";
-        networking.wg-quick.interfaces.wgokolo.configFile = "/etc/nixos/wg/okolo.conf";
-        networking.wg-quick.interfaces.wgvisi.configFile = "/etc/nixos/wg/visi.conf";
-        #networking.wg-quick.interfaces.wgru.configFile = "/etc/nixos/wg/fbru.conf";
-        #networking.wg-quick.interfaces.wgus.configFile = "/etc/nixos/wg/us.conf";
+        networking.wg-quick.interfaces.wgokolo.configFile = config.age.secrets.wgokolo.path;
+        networking.wg-quick.interfaces.wgvisi.configFile = config.age.secrets.wgvisi.path;
         networking.firewall = {
           enable = true;
           allowedUDPPorts = [ 5960 5961 5962 5963 5964 5965 5966 5966 5967 5968 5969 5970 8000 ];
@@ -361,12 +382,6 @@ in
             default_session = initial_session;
           };
         };
-        security.sudo.extraRules = [
-          {
-            users = [ "byda" ];
-            commands = [{command = "ALL"; options = ["NOPASSWD"];}];
-          }
-        ];
       };
     };
   };
