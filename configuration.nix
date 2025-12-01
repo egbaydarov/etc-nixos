@@ -103,6 +103,25 @@ in
     __GLX_VENDOR_LIBRARY_NAME = "nvidia";
   };
 
+  xdg.mime = {
+    enable = true;
+    defaultApplications = {
+      # Folders → kitty + nvim
+      "inode/directory" = "kitty.desktop";
+
+      # All other zen
+      "x-scheme-handler/http"   = "zen.desktop";
+      "x-scheme-handler/https"  = "zen.desktop";
+      "x-scheme-handler/ssh"  = "zen.desktop";
+      "application/xhtml+xml"   = "zen.desktop";
+      "application/x-sh"        = "zen.desktop";
+      "application/x-shellscript" = "zen.desktop";
+      "text/*"              = "zen.desktop";
+      "image/*"               = "zen.desktop";
+    };
+  };
+
+
   environment.systemPackages =
   let
     zen-browser = (import (builtins.fetchTarball "https://github.com/youwen5/zen-browser-flake/archive/master.tar.gz") {
@@ -111,6 +130,10 @@ in
   in
   [
     pkgs2505.go
+    pkgs2505.yq
+    pkgs2505.jq
+    pkgs2505.python3
+    pkgs2505.grpcurl
     pkgs2505.gopls
     pkgs2505.nodejs_20
     (import ./easy-dotnet.nix {
@@ -213,10 +236,6 @@ in
           127.0.0.1 clickhouse-3
           127.0.0.1 clickhouse-zookeeper
         '';
-        environment.systemPackages = [
-          pkgsUnstable.chromium
-          pkgs2505.jq
-        ];
         virtualisation.docker = {
           rootless = {
             enable = true;
@@ -313,7 +332,6 @@ in
         system.nixos.tags = [ "byda" ];
         environment.systemPackages = with pkgs2505; [
           v4l-utils
-          firefox
         ];
         networking.hostName = "nixos-dude";
         networking.wg-quick.interfaces.wgokolo.configFile = "/etc/nixos/wg/okolo.conf";
