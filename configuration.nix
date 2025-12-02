@@ -204,6 +204,7 @@ in
 
     pkgs2505.fuzzel
     pkgs2505.wl-clipboard
+    pkgs2505.hyprpolkitagent
     pkgs2505.kitty
     pkgsUnstable.wezterm
     pkgs2505.cliphist
