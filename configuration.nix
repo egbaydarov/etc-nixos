@@ -189,6 +189,7 @@ in
     pkgs2505.hyprpaper
     pkgs2505.mesa
     pkgs2505.gimp3
+    pkgs2505.droidcam
 
     pkgs2505.ripgrep
     pkgs2505.fd
@@ -286,8 +287,18 @@ in
         };
         boot.extraModulePackages = with config.boot.kernelPackages; [
           (pkgs2505.callPackage ./ovpn-dco.nix { kernel = config.boot.kernelPackages.kernel; })
+	  v4l2loopback
         ];
-        boot.kernelModules = [ "ovpn-dco-v2" ];
+        boot.kernelModules = [ 
+	  "ovpn-dco-v2"
+	  "v4l2loopback"
+	];
+	boot.extraModprobeConfig = ''
+	  # exclusive_caps: will only show device when actually streaming
+	  # card_label: Name of virtual camera, how it'll show up in Zoom, Teams
+	  # https://github.com/umlaeute/v4l2loopback
+	  options v4l2loopback exclusive_caps=1 card_label="Network Cam"
+	'';
         services.greetd = {
           enable = true;
           settings = rec {
