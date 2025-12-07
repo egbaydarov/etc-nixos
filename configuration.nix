@@ -47,6 +47,9 @@ in
       whvpn = {
         file = /root/wh.age;
       };
+      u2f_keys = {
+        file = /root/u2f_keys.age;
+      };
     };
   };
 
@@ -88,6 +91,8 @@ in
   #    };
   #});
   services.pcscd.enable = true;
+  services.udev.packages = [ pkgs2505.yubikey-personalization ];
+  services.yubikey-agent.enable = true;
   programs.gnupg.agent = {
     enable = true;
     enableSSHSupport = true;
@@ -178,6 +183,7 @@ in
     pkgs2505.clang-tools
     pkgs2505.yubikey-manager
     pkgs2505.yubioath-flutter
+    pkgs2505.pam_u2f
 
     pkgs2505.clang
     pkgs2505.cmake
@@ -211,8 +217,12 @@ in
     pkgs2505.cliphist
     pkgs2505.mako
     pkgs2505.xcur2png
+    pkgs2505.keepassxc
     pkgs2505.lua-language-server
   ];
+
+  # for yubi
+  hardware.gpgSmartcards.enable = true;
   services.libinput.enable = true;
   programs.neovim = {
     enable = true;
@@ -221,7 +231,30 @@ in
   programs.hyprlock.enable = true;
   security = {
     polkit.enable = true;
-    pam.services.hyprlock = {};
+    pam = {
+      u2f = {
+        control = "sufficient";
+        #control = "required";
+        enable = true;
+        settings = {
+	 pinverification = 1;
+	 authfile = config.age.secrets.u2f_keys.path;
+	 userpresence = 1;
+         cue = true;
+        };
+      };
+      services = {
+        login = { u2fAuth = true; unixAuth = false; };
+        sudo = { u2fAuth = true; unixAuth = false; };
+        su   = { u2fAuth = true; unixAuth = false; };
+        "polkit-1" = { u2fAuth = true; unixAuth = false; };
+	#TODO: use pam with it somehow
+        hyprlock = {};
+      };
+    };
+  };
+  environment.shellAliases = {
+    root = "pkexec bash -l";
   };
   security.rtkit.enable = true;
   services.gnome.gnome-keyring.enable = true;
@@ -364,6 +397,18 @@ in
             wlrobs
           ];
         };
+        boot.extraModulePackages = with config.boot.kernelPackages; [
+	  v4l2loopback
+        ];
+        boot.kernelModules = [ 
+	  "v4l2loopback"
+	];
+	boot.extraModprobeConfig = ''
+	  # exclusive_caps: will only show device when actually streaming
+	  # card_label: Name of virtual camera, how it'll show up in Zoom, Teams
+	  # https://github.com/umlaeute/v4l2loopback
+	  options v4l2loopback exclusive_caps=1 card_label="Network Cam"
+	'';
         system.nixos.tags = [ "byda" ];
         environment.systemPackages = with pkgs2505; [
           v4l-utils
@@ -383,7 +428,6 @@ in
           publish.enable = true;
           publish.userServices = true;
         };
-        services.pcscd.enable = true;
         services.greetd = {
           enable = true;
           settings = rec {
