@@ -157,7 +157,7 @@ in
 
   environment.systemPackages =
   let
-    zen-browser = (import (builtins.fetchTarball "https://github.com/youwen5/zen-browser-flake/archive/master.tar.gz") {
+    zen-browser = (import (builtins.fetchTarball "https://github.com/egbaydarov/zen-browser-flake/archive/master.tar.gz") {
       pkgs = pkgs2505;
     }).default;
   in
@@ -184,6 +184,7 @@ in
     pkgs2505.yubikey-manager
     pkgs2505.yubioath-flutter
     pkgs2505.pam_u2f
+    pkgs2505.sshfs
 
     pkgs2505.clang
     pkgs2505.cmake
