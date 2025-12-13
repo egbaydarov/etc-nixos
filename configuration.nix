@@ -174,6 +174,8 @@ in
     pkgsStable.python3
     pkgsStable.grpcurl
     pkgsStable.gopls
+    pkgsStable.mongodb-compass
+    pkgsStable.lens
     pkgsStable.nodejs_20
     (import ./easy-dotnet.nix {
       buildDotnetGlobalTool = pkgsStable.buildDotnetGlobalTool;
