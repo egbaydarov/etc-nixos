@@ -7,7 +7,7 @@
   imports =
     [
       (modulesPath + "/installer/scan/not-detected.nix")
-      "${builtins.fetchGit {url=https://github.com/NixOS/nixos-hardware.git;rev="11f2d9ea49c3e964315215d6baa73a8d42672f06";}}/lenovo/legion/16aph8"
+      "${builtins.fetchGit {url=https://github.com/NixOS/nixos-hardware.git;rev="9154f4569b6cdfd3c595851a6ba51bfaa472d9f3";}}/lenovo/legion/16aph8"
     ];
 
   services.xserver.videoDrivers = [ "nvidia" ];
@@ -33,7 +33,7 @@
   # networking.interfaces.enp2s0.useDHCP = lib.mkDefault true;
   # networking.interfaces.wlo1.useDHCP = lib.mkDefault true;
   nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
-  hardware.cpu.amd.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;
+  hardware.cpu.amd.updateMicrocode = lib.mkDefault true;
   hardware.bluetooth = {
     enable = true;
     powerOnBoot = true;

@@ -1,10 +1,10 @@
 { config, lib, pkgs, ... }:
 let
-  packages2505 = fetchTarball {
-    url = "https://github.com/NixOS/nixpkgs/archive/refs/tags/25.05.tar.gz";
-    sha256 = "1915r28xc4znrh2vf4rrjnxldw2imysz819gzhk9qlrkqanmfsxd";
+  packagesStable = fetchTarball {
+    url = "https://github.com/NixOS/nixpkgs/archive/refs/tags/25.11.tar.gz";
+    sha256 = "1zn1lsafn62sz6azx6j735fh4vwwghj8cc9x91g5sx2nrg23ap9k";
   };
-  pkgs2505 = import packages2505 {
+  pkgsStable = import packagesStable {
     config.allowUnfree = true;
     config.chromium.enableWideVine = true;
   };
@@ -76,22 +76,29 @@ in
       };
     };
   };
-  boot.kernelParams = [ "vt.global_cursor_default=0" "consoleblank=0" "amdgpu.sg_display=0" ];
+  boot.kernelParams = [ "amdgpu.sg_display=1" ];
 
-  boot.kernelPackages = pkgs2505.linuxPackages_latest;
-  #boot.kernelPackages = pkgs.linuxPackages_6_15;
-  #boot.kernelPackages = pkgs2505.linuxPackagesFor (pkgs2505.linux_6_14.override {
+  boot.kernelPackages = pkgsStable.linuxPackages_latest;
+  #boot.kernelPackages = pkgsStable.linuxPackages_6_18;
+
+  # way to use custom kernel
+  #boot.kernelPackages = pkgsStable.linuxPackagesFor (pkgsStable.linux_6_14.override {
   #  argsOverride = rec {
   #      src = pkgs.fetchurl {
-  #            url = "https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.14.8.tar.xz";
-  #            sha256 = "sha256-YrEuzTB1o1frMgk1ZX3oTgFVKANxfa04P6fMOqSqKQU=";
+  #            url = "https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.18.tar.xz";
+  #            sha256 = "sha256-kQakYF2p4x/xdlnZWHgrgV+VkaswjQOw7iGq1sfc7Us=";
   #      };
-  #      version = "6.14.8";
-  #      modDirVersion = "6.14.8";
+  #      version = "6.18.0";
+  #      structuredExtraConfig = with pkgs.lib; with pkgs.lib.kernel; {
+  #        BCACHEFS_POSIX_ACL = mkForce unset;
+  #        ZPOOL = mkForce unset;
+  #      };
+  #      modDirVersion = "6.18.0";
   #    };
   #});
+
   services.pcscd.enable = true;
-  services.udev.packages = [ pkgs2505.yubikey-personalization ];
+  services.udev.packages = [ pkgsStable.yubikey-personalization ];
   services.yubikey-agent.enable = true;
   programs.gnupg.agent = {
     enable = true;
@@ -123,7 +130,7 @@ in
 
   i18n.defaultLocale = "en_US.UTF-8";
 
-  fonts.packages = with pkgs2505; [
+  fonts.packages = with pkgsStable; [
     nerd-fonts.jetbrains-mono
     nerd-fonts.fira-code
     nerd-fonts.zed-mono
@@ -141,16 +148,15 @@ in
     defaultApplications = {
       # Folders → kitty + nvim
       "inode/directory" = "kitty.desktop";
-
       # All other zen
-      "x-scheme-handler/http"   = "zen.desktop";
-      "x-scheme-handler/https"  = "zen.desktop";
-      "x-scheme-handler/ssh"  = "zen.desktop";
-      "application/xhtml+xml"   = "zen.desktop";
-      "application/x-sh"        = "zen.desktop";
+      "x-scheme-handler/http"     = "zen.desktop";
+      "x-scheme-handler/https"    = "zen.desktop";
+      "x-scheme-handler/ssh"      = "zen.desktop";
+      "application/xhtml+xml"     = "zen.desktop";
+      "application/x-sh"          = "zen.desktop";
       "application/x-shellscript" = "zen.desktop";
-      "text/*"              = "zen.desktop";
-      "image/*"               = "zen.desktop";
+      "text/*"                    = "zen.desktop";
+      "image/*"                   = "gimp.desktop";
     };
   };
 
@@ -158,68 +164,68 @@ in
   environment.systemPackages =
   let
     zen-browser = (import (builtins.fetchTarball "https://github.com/egbaydarov/zen-browser-flake/archive/master.tar.gz") {
-      pkgs = pkgs2505;
+      pkgs = pkgsStable;
     }).default;
   in
   [
-    pkgs2505.go
-    pkgs2505.yq
-    pkgs2505.jq
-    pkgs2505.python3
-    pkgs2505.grpcurl
-    pkgs2505.gopls
-    pkgs2505.nodejs_20
+    pkgsStable.go
+    pkgsStable.yq
+    pkgsStable.jq
+    pkgsStable.python3
+    pkgsStable.grpcurl
+    pkgsStable.gopls
+    pkgsStable.nodejs_20
     (import ./easy-dotnet.nix {
-      buildDotnetGlobalTool = pkgs2505.buildDotnetGlobalTool;
-      dotnetCorePackages = pkgs2505.dotnetCorePackages;
-      lib  = pkgs2505.lib;
+      buildDotnetGlobalTool = pkgsStable.buildDotnetGlobalTool;
+      dotnetCorePackages = pkgsStable.dotnetCorePackages;
+      lib  = pkgsStable.lib;
     })
     (import ./cursor.nix { 
-      pkgs = pkgs2505;
-      lib  = pkgs2505.lib;
+      pkgs = pkgsStable;
+      lib  = pkgsStable.lib;
     })
     (pkgs.callPackage "${builtins.fetchTarball "https://github.com/ryantm/agenix/archive/fcdea223397448d35d9b31f798479227e80183f6.tar.gz"}/pkgs/agenix.nix" {})
     zen-browser
-    pkgs2505.clang-tools
-    pkgs2505.yubikey-manager
-    pkgs2505.yubioath-flutter
-    pkgs2505.pam_u2f
-    pkgs2505.sshfs
+    pkgsStable.clang-tools
+    pkgsStable.yubikey-manager
+    pkgsStable.yubioath-flutter
+    pkgsStable.pam_u2f
+    pkgsStable.sshfs
 
-    pkgs2505.clang
-    pkgs2505.cmake
-    pkgs2505.git
-    pkgs2505.lm_sensors
-    pkgs2505.brightnessctl
-    pkgs2505.wpa_supplicant
-    pkgs2505.fuzzel
-    pkgs2505.hyprpaper
-    pkgs2505.mesa
-    pkgs2505.gimp3
-    pkgs2505.droidcam
+    pkgsStable.clang
+    pkgsStable.cmake
+    pkgsStable.git
+    pkgsStable.lm_sensors
+    pkgsStable.brightnessctl
+    pkgsStable.wpa_supplicant
+    pkgsStable.fuzzel
+    pkgsStable.hyprpaper
+    pkgsStable.mesa
+    pkgsStable.gimp3
+    pkgsStable.droidcam
 
-    pkgs2505.ripgrep
-    pkgs2505.fd
-    pkgs2505.fzf
+    pkgsStable.ripgrep
+    pkgsStable.fd
+    pkgsStable.fzf
 
-    pkgs2505.hyprshot
-    pkgs2505.pulseaudio
-    pkgs2505.hyprcursor
-    pkgs2505.waybar
+    pkgsStable.hyprshot
+    pkgsStable.pulseaudio
+    pkgsStable.hyprcursor
+    pkgsStable.waybar
 
     #gpg
-    pkgs2505.pinentry-curses
+    pkgsStable.pinentry-curses
 
-    pkgs2505.fuzzel
-    pkgs2505.wl-clipboard
-    pkgs2505.hyprpolkitagent
-    pkgs2505.kitty
-    pkgsUnstable.wezterm
-    pkgs2505.cliphist
-    pkgs2505.mako
-    pkgs2505.xcur2png
-    pkgs2505.keepassxc
-    pkgs2505.lua-language-server
+    pkgsStable.fuzzel
+    pkgsStable.wl-clipboard
+    pkgsStable.hyprpolkitagent
+    pkgsStable.kitty
+    pkgsStable.wezterm
+    pkgsStable.cliphist
+    pkgsStable.mako
+    pkgsStable.xcur2png
+    pkgsStable.keepassxc
+    pkgsStable.lua-language-server
   ];
 
   # for yubi
@@ -238,10 +244,11 @@ in
         #control = "required";
         enable = true;
         settings = {
-	 pinverification = 1;
-	 authfile = config.age.secrets.u2f_keys.path;
-	 userpresence = 1;
-         cue = true;
+          pinverification = 1;
+          #debug = true;
+          authfile = config.age.secrets.u2f_keys.path;
+          userpresence = 1;
+          cue = true;
         };
       };
       services = {
@@ -249,7 +256,6 @@ in
         sudo = { u2fAuth = true; unixAuth = false; };
         su   = { u2fAuth = true; unixAuth = false; };
         "polkit-1" = { u2fAuth = true; unixAuth = false; };
-	#TODO: use pam with it somehow
         hyprlock = {};
       };
     };
@@ -270,12 +276,12 @@ in
   users.users = {
     boogie = {
       isNormalUser = true;
-      packages = with pkgs2505; [];
+      packages = with pkgsStable; [];
     };
 
     byda = {
       isNormalUser = true;
-      packages = with pkgs2505; [];
+      packages = with pkgsStable; [];
     };
   };
 
@@ -320,19 +326,19 @@ in
           allowPing = true;
         };
         boot.extraModulePackages = with config.boot.kernelPackages; [
-          (pkgs2505.callPackage ./ovpn-dco.nix { kernel = config.boot.kernelPackages.kernel; })
-	  v4l2loopback
+          #(pkgsStable.callPackage ./ovpn-dco.nix { kernel = config.boot.kernelPackages.kernel; })
+          v4l2loopback
         ];
         boot.kernelModules = [ 
-	  "ovpn-dco-v2"
-	  "v4l2loopback"
-	];
-	boot.extraModprobeConfig = ''
-	  # exclusive_caps: will only show device when actually streaming
-	  # card_label: Name of virtual camera, how it'll show up in Zoom, Teams
-	  # https://github.com/umlaeute/v4l2loopback
-	  options v4l2loopback exclusive_caps=1 card_label="Network Cam"
-	'';
+          "ovpn-dco-v2"
+          "v4l2loopback"
+        ];
+        boot.extraModprobeConfig = ''
+          # exclusive_caps: will only show device when actually streaming
+          # card_label: Name of virtual camera, how it'll show up in Zoom, Teams
+          # https://github.com/umlaeute/v4l2loopback
+          options v4l2loopback exclusive_caps=1 card_label="Network Cam"
+        '';
         services.greetd = {
           enable = true;
           settings = rec {
@@ -399,19 +405,19 @@ in
           ];
         };
         boot.extraModulePackages = with config.boot.kernelPackages; [
-	  v4l2loopback
+          v4l2loopback
         ];
         boot.kernelModules = [ 
-	  "v4l2loopback"
-	];
-	boot.extraModprobeConfig = ''
-	  # exclusive_caps: will only show device when actually streaming
-	  # card_label: Name of virtual camera, how it'll show up in Zoom, Teams
-	  # https://github.com/umlaeute/v4l2loopback
-	  options v4l2loopback exclusive_caps=1 card_label="Network Cam"
-	'';
+          "v4l2loopback"
+        ];
+          boot.extraModprobeConfig = ''
+          # exclusive_caps: will only show device when actually streaming
+          # card_label: Name of virtual camera, how it'll show up in Zoom, Teams
+          # https://github.com/umlaeute/v4l2loopback
+          options v4l2loopback exclusive_caps=1 card_label="Network Cam"
+        '';
         system.nixos.tags = [ "byda" ];
-        environment.systemPackages = with pkgs2505; [
+        environment.systemPackages = with pkgsStable; [
           v4l-utils
         ];
         networking.hostName = "nixos-dude";
