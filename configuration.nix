@@ -222,7 +222,8 @@ in
     pkgsStable.wl-clipboard
     pkgsStable.hyprpolkitagent
     pkgsStable.kitty
-    pkgsStable.wezterm
+    pkgsStable.foot
+    pkgsStable.tmux
     pkgsStable.cliphist
     pkgsStable.mako
     pkgsStable.xcur2png
