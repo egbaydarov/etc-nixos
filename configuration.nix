@@ -217,8 +217,16 @@ in
 
     #gpg
     pkgsStable.pinentry-curses
-
     pkgsStable.fuzzel
+    (pkgsStable.wtype.overrideAttrs (old: {
+      src = pkgsStable.fetchFromGitHub {
+        owner = "atx";
+        repo = "wtype";
+        rev = "v0.4";
+        hash = "sha256-TfpzAi0mkXugQn70MISyNFOXIJpDwvgh3enGv0Xq8S4=";
+      };
+    }))
+    pkgsStable.wtype
     pkgsStable.wl-clipboard
     pkgsStable.hyprpolkitagent
     pkgsStable.kitty
