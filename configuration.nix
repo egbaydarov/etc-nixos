@@ -98,6 +98,13 @@ in
   #});
 
   services.pcscd.enable = true;
+  services.udev.extraRules = ''
+    # Match via vendor/product attributes
+    KERNEL=="hidraw*", ATTRS{idVendor}=="054c", ATTRS{idProduct}=="0ce6", TAG+="uaccess", MODE="0660"
+  
+    # Match via parent kernel device string
+    KERNEL=="hidraw*", KERNELS=="*054C:0CE6*", TAG+="uaccess", MODE="0660"
+  '';
   services.udev.packages = [ pkgsStable.yubikey-personalization ];
   services.yubikey-agent.enable = true;
   programs.gnupg.agent = {
@@ -427,9 +434,12 @@ in
           # https://github.com/umlaeute/v4l2loopback
           options v4l2loopback exclusive_caps=1 card_label="Network Cam"
         '';
+
+        systemd.services."wg-quick-wgvisi".wantedBy = lib.mkForce [ ];
         system.nixos.tags = [ "byda" ];
         environment.systemPackages = with pkgsStable; [
           v4l-utils
+          steam
         ];
         networking.hostName = "nixos-dude";
         networking.wg-quick.interfaces.wgokolo.configFile = config.age.secrets.wgokolo.path;
