@@ -291,18 +291,24 @@ in
   };
 
   nixpkgs.config.allowUnfree = true;
+  users.groups.cryptdata = { };
   users.users = {
     boogie = {
       isNormalUser = true;
+      extraGroups = [ "cryptdata" ];
       packages = with pkgsStable; [];
     };
 
     byda = {
       isNormalUser = true;
+      extraGroups = [ "cryptdata" ];
       packages = with pkgsStable; [];
     };
   };
 
+  systemd.tmpfiles.rules = [
+    "d /data 2770 root cryptdata - -"
+  ];
   nix.extraOptions = ''
     extra-sandbox-paths = /var/cache/clickhouse-sccache
   '';
