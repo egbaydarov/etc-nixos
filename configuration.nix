@@ -329,10 +329,9 @@ in
           rootless = {
             enable = true;
             setSocketVariable = true;
-          };
-          enable = true;
-          daemon.settings = {
-            data-root = "/home/boogie/.docker/data";
+            daemon.settings = {
+             data-root = "/home/boogie/.docker/data";
+            };
           };
         };
         system.nixos.tags = [ "boogie" ];
@@ -409,10 +408,9 @@ in
           rootless = {
             enable = true;
             setSocketVariable = true;
-          };
-          enable = true;
-          daemon.settings = {
-            data-root = "/home/byda/.docker/data";
+            daemon.settings = {
+              data-root = "/home/byda/.docker/data";
+            };
           };
         };
         programs.obs-studio = {
