@@ -16,6 +16,11 @@ let
     config.allowUnfree = true;
     config.chromium.enableWideVine = true;
   };
+
+  #usb stick setup
+  mountPoint = "/mnt/usb";
+  usbSerial  = "001CC07CEB81BB21816E0013";
+  usbGid = 989;
 in
 {
   imports =
@@ -61,6 +66,7 @@ in
     options = "--delete-older-than 7d";
   };
   services.upower.enable = true;
+  services.nixseparatedebuginfod2.enable = true;
   services.keyd = {
     enable = true;
     keyboards = {
@@ -99,11 +105,13 @@ in
 
   services.pcscd.enable = true;
   services.udev.extraRules = ''
-    # Match via vendor/product attributes
+    # sony ds5
     KERNEL=="hidraw*", ATTRS{idVendor}=="054c", ATTRS{idProduct}=="0ce6", TAG+="uaccess", MODE="0660"
-  
-    # Match via parent kernel device string
     KERNEL=="hidraw*", KERNELS=="*054C:0CE6*", TAG+="uaccess", MODE="0660"
+
+    # thumbdrive
+    ACTION=="add", SUBSYSTEM=="block", ENV{DEVTYPE}=="partition", ENV{ID_FS_TYPE}=="vfat", ENV{ID_SERIAL_SHORT}=="${usbSerial}", RUN{program}+="${pkgs.systemd}/bin/systemd-mount --no-block --collect --bind-device --options=rw,nosuid,nodev,noexec,uid=0,gid=${toString usbGid},dmask=007,fmask=117,utf8=1,shortname=mixed $devnode ${mountPoint}"
+    ACTION=="remove", SUBSYSTEM=="block", ENV{DEVTYPE}=="partition", ENV{ID_SERIAL_SHORT}=="${usbSerial}", RUN{program}+="${pkgs.systemd}/bin/systemd-umount ${mountPoint}"
   '';
   services.udev.packages = [ pkgsStable.yubikey-personalization ];
   services.yubikey-agent.enable = true;
@@ -292,23 +300,26 @@ in
 
   nixpkgs.config.allowUnfree = true;
   users.groups.cryptdata = { };
+  users.groups.usbmnt = { gid = usbGid; };
   users.users = {
     boogie = {
       isNormalUser = true;
-      extraGroups = [ "cryptdata" ];
+      extraGroups = [ "cryptdata" "usbmnt" ];
       packages = with pkgsStable; [];
     };
 
     byda = {
       isNormalUser = true;
-      extraGroups = [ "cryptdata" ];
+      extraGroups = [ "cryptdata" "usbmnt" ];
       packages = with pkgsStable; [];
     };
   };
 
   systemd.tmpfiles.rules = [
     "d /data 2770 root cryptdata - -"
+    "d /mnt/usb 2775 root usbmnt - -"
   ];
+
   nix.extraOptions = ''
     extra-sandbox-paths = /var/cache/clickhouse-sccache
   '';
