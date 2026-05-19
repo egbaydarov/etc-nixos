@@ -40,6 +40,9 @@ in
       wgokolo = {
         file = /root/wgokolo.age;
       };
+      wgru = {
+        file = /root/wgru.age;
+      };
       wgvisi = {
         file = /root/wgvisi.age;
       };
@@ -183,6 +186,7 @@ in
     }).default;
   in
   [
+    pkgsStable.bitwig-studio
     pkgsStable.go
     pkgsStable.yq
     pkgsStable.jq
@@ -225,6 +229,10 @@ in
     pkgsStable.fd
     pkgsStable.fzf
 
+    (pkgsStable.llm.withPlugins {
+      llm-grok = true;
+    })
+
     pkgsStable.hyprshot
     pkgsStable.pulseaudio
     pkgsStable.hyprcursor
@@ -242,6 +250,7 @@ in
       };
     }))
     pkgsStable.wtype
+    pkgsStable.wireshark
     pkgsStable.wl-clipboard
     pkgsStable.hyprpolkitagent
     pkgsStable.kitty
@@ -300,7 +309,16 @@ in
 
   nixpkgs.config.allowUnfree = true;
   users.groups.cryptdata = { };
+  users.groups.wireshark = { };
+  security.wrappers.dumpcap = lib.mkIf true {
+    source = "${pkgsStable.wireshark}/bin/dumpcap";
+    capabilities = "cap_net_raw,cap_net_admin+eip";
+    owner = "root";
+    group = "wireshark";
+    permissions = "u+rx,g+x";
+  };
   users.groups.usbmnt = { gid = usbGid; };
+
   users.users = {
     boogie = {
       isNormalUser = true;
@@ -310,7 +328,7 @@ in
 
     byda = {
       isNormalUser = true;
-      extraGroups = [ "cryptdata" "usbmnt" ];
+      extraGroups = [ "cryptdata" "usbmnt" "wireshark"];
       packages = with pkgsStable; [];
     };
   };
@@ -353,6 +371,7 @@ in
         };
         system.nixos.tags = [ "boogie" ];
         networking.hostName = "nixos-boogie";
+
         networking.firewall = {
           enable = true;
           allowedUDPPorts = [ 8888 ];
@@ -367,12 +386,28 @@ in
           "ovpn-dco-v2"
           "v4l2loopback"
         ];
+
         boot.extraModprobeConfig = ''
           # exclusive_caps: will only show device when actually streaming
           # card_label: Name of virtual camera, how it'll show up in Zoom, Teams
           # https://github.com/umlaeute/v4l2loopback
           options v4l2loopback exclusive_caps=1 card_label="Network Cam"
+          # Copy Fail / CVE-2026-31431
+          install algif_aead ${pkgs.coreutils}/bin/false
+         
+          # Dirty Frag / CVE-2026-43284 + CVE-2026-43500
+          install esp4 ${pkgs.coreutils}/bin/false
+          install esp6 ${pkgs.coreutils}/bin/false
+          install rxrpc ${pkgs.coreutils}/bin/false
         '';
+
+        boot.blacklistedKernelModules = [
+          "algif_aead"
+          "esp4"
+          "esp6"
+          "rxrpc"
+        ];
+
         services.greetd = {
           enable = true;
           settings = rec {
@@ -410,11 +445,6 @@ in
           };
         };
         users.extraGroups.docker.members = [ "boogie" ];
-        security.pki.certificateFiles = [
-          /home/boogie/certs/OLANroot.crt
-          /home/boogie/certs/RCA-CA.crt
-          /home/boogie/certs/office-SUB-CA.crt
-        ];
       };
     };
 
@@ -450,14 +480,36 @@ in
           options v4l2loopback exclusive_caps=1 card_label="Network Cam"
         '';
 
-        systemd.services."wg-quick-wgvisi".wantedBy = lib.mkForce [ ];
+        systemd.services."wg-quick-wgru".wantedBy = lib.mkForce [ ];
         system.nixos.tags = [ "byda" ];
         environment.systemPackages = with pkgsStable; [
           v4l-utils
           steam
         ];
+	networking.hosts = {
+          "204.168.166.118" = [
+            "ok-stepca-hz-1.ok.lan"
+            "ok-stepca-hz-1"
+          ];
+       
+          "89.167.0.144" = [
+            "ok-etcd-hz-1.ok.lan"
+            "ok-etcd-hz-1"
+          ];
+       
+          "204.168.205.158" = [
+            "ok-etcd-hz-2.ok.lan"
+            "ok-etcd-hz-2"
+          ];
+       
+          "37.27.252.108" = [
+            "ok-etcd-hz-3.ok.lan"
+            "ok-etcd-hz-3"
+          ];
+        };
         networking.hostName = "nixos-dude";
         networking.wg-quick.interfaces.wgokolo.configFile = config.age.secrets.wgokolo.path;
+        networking.wg-quick.interfaces.wgru.configFile = config.age.secrets.wgru.path;
         networking.wg-quick.interfaces.wgvisi.configFile = config.age.secrets.wgvisi.path;
         networking.firewall = {
           enable = true;
@@ -485,6 +537,7 @@ in
     };
   };
 
+  networking.nameservers = [ "8.8.8.8" "8.8.4.4" ];
   networking.networkmanager.enable = true;
   # networking.firewall.allowedUDPPorts = [ ... ];
   # Or disable the firewall altogether.
