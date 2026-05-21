@@ -196,11 +196,6 @@ in
     pkgsStable.mongodb-compass
     pkgsStable.lens
     pkgsStable.nodejs_20
-    (import ./easy-dotnet.nix {
-      buildDotnetGlobalTool = pkgsStable.buildDotnetGlobalTool;
-      dotnetCorePackages = pkgsStable.dotnetCorePackages;
-      lib  = pkgsStable.lib;
-    })
     (import ./cursor.nix { 
       pkgs = pkgsStable;
       lib  = pkgsStable.lib;
