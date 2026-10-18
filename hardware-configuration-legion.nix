@@ -12,10 +12,10 @@
 
   services.xserver.videoDrivers = [ "nvidia" ];
   boot.initrd.systemd.enable = true;
-  boot.initrd.luks.devices.cryptdata = {
-    device = "/dev/disk/by-uuid/f75070bd-b86a-4970-81fe-ca3e6aaa88f7";
-    crypttabExtraOpts = [ "fido2-device=auto" ];
-  };
+  #boot.initrd.luks.devices.cryptdata = {
+  #  device = "/dev/disk/by-uuid/f75070bd-b86a-4970-81fe-ca3e6aaa88f7";
+  #  crypttabExtraOpts = [ "fido2-device=auto" ];
+  #};
   boot.initrd.availableKernelModules = [ "nvme" "xhci_pci" "usb_storage" "usbhid" "sd_mod" ];
 
   fileSystems."/boot" = {
@@ -27,11 +27,11 @@
     device = "/dev/disk/by-uuid/3a1b5153-6ae3-4d38-92f3-26d47788e5df";
     fsType = "xfs";
   };
-  fileSystems."/data" = {
-    device = "/dev/mapper/cryptdata";
-    fsType = "xfs";
-    options = [ "nofail" ];
-  };
+  #fileSystems."/data" = {
+  #  device = "/dev/mapper/cryptdata";
+  #  fsType = "xfs";
+  #  options = [ "nofail" ];
+  #};
 
   swapDevices = [ ];
 

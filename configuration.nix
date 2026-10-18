@@ -86,6 +86,7 @@ in
     };
   };
   boot.kernelParams = [ "amdgpu.sg_display=1" ];
+  boot.kernel.sysctl."net.ipv4.ip_forward" = 1;
 
   boot.kernelPackages = pkgsStable.linuxPackages_latest;
   #boot.kernelPackages = pkgsStable.linuxPackages_6_18;
@@ -142,6 +143,7 @@ in
   programs.xwayland.enable = true;
 
   boot.loader.systemd-boot.enable = true;
+  boot.loader.systemd-boot.editor = false;
   boot.loader.systemd-boot.configurationLimit = 10;
   boot.loader.efi.canTouchEfiVariables = true;
   boot.loader.timeout = null;
@@ -199,6 +201,10 @@ in
     (import ./cursor.nix { 
       pkgs = pkgsStable;
       lib  = pkgsStable.lib;
+    })
+    (import ./cursor-cli.nix {
+      pkgs = pkgsStable;
+      lib = pkgsStable.lib;
     })
     (pkgs.callPackage "${builtins.fetchTarball "https://github.com/ryantm/agenix/archive/fcdea223397448d35d9b31f798479227e80183f6.tar.gz"}/pkgs/agenix.nix" {})
     zen-browser
@@ -337,6 +343,8 @@ in
     extra-sandbox-paths = /var/cache/clickhouse-sccache
   '';
 
+  system.nixos.tags = [ "root" ];
+
   specialisation = {
 
     boogie = {
@@ -370,7 +378,7 @@ in
         networking.firewall = {
           enable = true;
           allowedUDPPorts = [ 8888 ];
-          allowedTCPPorts = [ 5960 5961 5962 5963 5964 5965 5966 5966 5967 5968 5969 5970 8000 ];
+          allowedTCPPorts = [ 7236 5960 5961 5962 5963 5964 5965 5966 5966 5967 5968 5969 5970 8000 ];
           allowPing = true;
         };
         boot.extraModulePackages = with config.boot.kernelPackages; [
@@ -444,8 +452,18 @@ in
     };
 
     byda = {
-      inheritParentConfig = true;
-      configuration = {
+     inheritParentConfig = true;
+     configuration = {
+       #imports = [
+       #  (builtins.getFlake "path:/home/byda/stuff/fluxcast").nixosModules.fluxcast
+       #];
+       #programs.fluxcast = {
+       #  enable = true;
+       #  users = [ "byda" ];
+       #          openFirewall = true;    # trusts the p2p-+ Wi-Fi Direct interface
+       #  rawSupplicant = true;   # optional: --wfd-p2p-backend wpas (TV as group owner)
+       #};
+
         virtualisation.docker = {
           rootless = {
             enable = true;
@@ -481,7 +499,7 @@ in
           v4l-utils
           steam
         ];
-	networking.hosts = {
+        networking.hosts = {
           "204.168.166.118" = [
             "ok-stepca-hz-1.ok.lan"
             "ok-stepca-hz-1"
@@ -503,9 +521,13 @@ in
           ];
         };
         networking.hostName = "nixos-dude";
+        systemd.services."wg-quick-wgokolo".restartTriggers = [ /root/wgokolo.age ];
+        systemd.services."wg-quick-wgru".restartTriggers = [ /root/wgru.age ];
+        systemd.services."wg-quick-wgvisi".restartTriggers = [ /root/wgvisi.age ];
         networking.wg-quick.interfaces.wgokolo.configFile = config.age.secrets.wgokolo.path;
         networking.wg-quick.interfaces.wgru.configFile = config.age.secrets.wgru.path;
         networking.wg-quick.interfaces.wgvisi.configFile = config.age.secrets.wgvisi.path;
+        systemd.services.NetworkManager-wait-online.enable = false;
         networking.firewall = {
           enable = true;
           allowedUDPPorts = [ 5960 5961 5962 5963 5964 5965 5966 5966 5967 5968 5969 5970 8000 ];
