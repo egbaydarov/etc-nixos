@@ -1,8 +1,8 @@
 { config, lib, pkgs, ... }:
 let
   packagesStable = fetchTarball {
-    url = "https://github.com/NixOS/nixpkgs/archive/refs/tags/25.11.tar.gz";
-    sha256 = "1zn1lsafn62sz6azx6j735fh4vwwghj8cc9x91g5sx2nrg23ap9k";
+    url = "https://github.com/NixOS/nixpkgs/archive/refs/tags/26.05.tar.gz";
+    sha256 = "0am8xx09fx5yf2p0wb001v0jx1g5hrfb76h4r37xph378jgk7pcr";
   };
   pkgsStable = import packagesStable {
     config.allowUnfree = true;
@@ -119,6 +119,7 @@ in
   '';
   services.udev.packages = [ pkgsStable.yubikey-personalization ];
   services.yubikey-agent.enable = true;
+
   programs.gnupg.agent = {
     enable = true;
     enableSSHSupport = true;
@@ -143,6 +144,8 @@ in
   programs.xwayland.enable = true;
 
   boot.loader.systemd-boot.enable = true;
+  boot.loader.efi.efiSysMountPoint = "/efi";
+  boot.loader.systemd-boot.xbootldrMountPoint = "/boot";
   boot.loader.systemd-boot.editor = false;
   boot.loader.systemd-boot.configurationLimit = 10;
   boot.loader.efi.canTouchEfiVariables = true;
@@ -197,11 +200,7 @@ in
     pkgsStable.gopls
     pkgsStable.mongodb-compass
     pkgsStable.lens
-    pkgsStable.nodejs_20
-    (import ./cursor.nix { 
-      pkgs = pkgsStable;
-      lib  = pkgsStable.lib;
-    })
+    pkgsStable.nodejs
     (import ./cursor-cli.nix {
       pkgs = pkgsStable;
       lib = pkgsStable.lib;
@@ -346,7 +345,6 @@ in
   system.nixos.tags = [ "root" ];
 
   specialisation = {
-
     boogie = {
       inheritParentConfig = true;
       configuration = {
@@ -377,12 +375,11 @@ in
 
         networking.firewall = {
           enable = true;
-          allowedUDPPorts = [ 8888 ];
-          allowedTCPPorts = [ 7236 5960 5961 5962 5963 5964 5965 5966 5966 5967 5968 5969 5970 8000 ];
+          allowedUDPPorts = [];
+          allowedTCPPorts = [];
           allowPing = true;
         };
         boot.extraModulePackages = with config.boot.kernelPackages; [
-          #(pkgsStable.callPackage ./ovpn-dco.nix { kernel = config.boot.kernelPackages.kernel; })
           v4l2loopback
         ];
         boot.kernelModules = [ 
@@ -395,6 +392,7 @@ in
           # card_label: Name of virtual camera, how it'll show up in Zoom, Teams
           # https://github.com/umlaeute/v4l2loopback
           options v4l2loopback exclusive_caps=1 card_label="Network Cam"
+
           # Copy Fail / CVE-2026-31431
           install algif_aead ${pkgs.coreutils}/bin/false
          
@@ -415,7 +413,7 @@ in
           enable = true;
           settings = rec {
             initial_session = {
-              command = "Hyprland";
+              command = "start-hyprland";
               user = "boogie";
             };
             default_session = initial_session;
@@ -476,7 +474,6 @@ in
         programs.obs-studio = {
           enable = true;
           plugins =  with pkgs.obs-studio-plugins; [
-            distroav
             wlrobs
           ];
         };
@@ -530,8 +527,8 @@ in
         systemd.services.NetworkManager-wait-online.enable = false;
         networking.firewall = {
           enable = true;
-          allowedUDPPorts = [ 5960 5961 5962 5963 5964 5965 5966 5966 5967 5968 5969 5970 8000 ];
-          allowedTCPPorts = [ 5960 5961 5962 5963 5964 5965 5966 5966 5967 5968 5969 5970 8000 ];
+          allowedUDPPorts = [];
+          allowedTCPPorts = [];
           allowPing = true;
         };
         services.avahi = {
@@ -544,7 +541,7 @@ in
           enable = true;
           settings = rec {
             initial_session = {
-              command = "Hyprland";
+              command = "start-hyprland";
               user = "byda";
             };
             default_session = initial_session;
@@ -556,32 +553,8 @@ in
 
   networking.nameservers = [ "8.8.8.8" "8.8.4.4" ];
   networking.networkmanager.enable = true;
-  # networking.firewall.allowedUDPPorts = [ ... ];
-  # Or disable the firewall altogether.
-  # networking.firewall.enable = false;
+  networking.useDHCP = lib.mkDefault true;
 
-
-  # Copy the NixOS configuration file and link it from the resulting system
-  # (/run/current-system/configuration.nix). This is useful in case you
-  # accidentally delete configuration.nix.
-  # system.copySystemConfiguration = true;
-
-  # This option defines the first version of NixOS you have installed on this particular machine,
-  # and is used to maintain compatibility with application data (e.g. databases) created on older NixOS versions.
-  #
-  # Most users should NEVER change this value after the initial install, for any reason,
-  # even if you've upgraded your system to a new NixOS release.
-  #
-  # This value does NOT affect the Nixpkgs version your packages and OS are pulled from,
-  # so changing it will NOT upgrade your system - see https://nixos.org/manual/nixos/stable/#sec-upgrading for how
-  # to actually do that.
-  #
-  # This value being lower than the current NixOS release does NOT mean your system is
-  # out of date, out of support, or vulnerable.
-  #
-  # Do NOT change this value unless you have manually inspected all the changes it would make to your configuration,
-  # and migrated your data accordingly.
-  #
-  # For more information, see `man configuration.nix` or https://nixos.org/manual/nixos/stable/options#opt-system.stateVersion .
+  # DO NOT CHANGE!
   system.stateVersion = "24.11";
 }
