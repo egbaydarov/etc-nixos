@@ -25,7 +25,7 @@ in
 {
   imports =
     [
-      ./hardware-configuration-legion.nix
+      ./hardware-configuration.nix
       "${builtins.fetchTarball "https://github.com/ryantm/agenix/archive/fcdea223397448d35d9b31f798479227e80183f6.tar.gz"}/modules/age.nix"
     ];
 
@@ -85,10 +85,15 @@ in
       };
     };
   };
-  boot.kernelParams = [ "amdgpu.sg_display=1" ];
   boot.kernel.sysctl."net.ipv4.ip_forward" = 1;
 
   boot.kernelPackages = pkgsStable.linuxPackages_latest;
+  # Extra SSDT working around Lenovo firmware bug:
+  # \_SB.PCI0.GPP0.PEGP.GPS -> NVD1 AE_NOT_FOUND (aborts PEGP._DSM)
+  boot.initrd.prepend = [
+    "${pkgsStable.callPackage ./acpi-nvd1-fix { }}/acpi-nvd1-fix.cpio"
+  ];
+
   #boot.kernelPackages = pkgsStable.linuxPackages_6_18;
 
   # way to use custom kernel
@@ -262,6 +267,18 @@ in
     pkgsStable.keepassxc
     pkgsStable.lua-language-server
   ];
+
+  systemd.services.set-platform-profile = {
+    description = "Set ACPI platform profile to max-power";
+  
+    wantedBy = [ "multi-user.target" ];
+    after = [ "systemd-udev-settle.service" ];
+  
+    serviceConfig = {
+      Type = "oneshot";
+      ExecStart = "${pkgs.bash}/bin/bash -c 'echo max-power > /sys/firmware/acpi/platform_profile'";
+    };
+  };
 
   # for yubi
   hardware.gpgSmartcards.enable = true;

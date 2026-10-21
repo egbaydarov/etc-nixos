@@ -1,12 +1,57 @@
 { config, lib, pkgs, modulesPath, ... }:
+let
+  unstable = import <nixos-unstable> {
+    system = pkgs.stdenv.hostPlatform.system;
+    config.allowUnfree = true;
+  };
+in
 {
   imports = [
     (modulesPath + "/installer/scan/not-detected.nix")
-    "${builtins.fetchGit {url=https://github.com/NixOS/nixos-hardware.git;rev="9154f4569b6cdfd3c595851a6ba51bfaa472d9f3";}}/lenovo/legion/16aph8"
+    #"${builtins.fetchGit {url=https://github.com/NixOS/nixos-hardware.git;rev="9154f4569b6cdfd3c595851a6ba51bfaa472d9f3";}}/lenovo/legion/16aph8"
   ];
 
+  hardware.cpu.amd.updateMicrocode = true;
+  boot.kernelParams = [
+    "amd_pstate=active"
+    "amdgpu.sg_display=1"
+  ];
+
+  # AMD GPU
+  hardware.graphics.enable = true;
+  hardware.graphics.enable32Bit = true;
+  hardware.amdgpu.initrd.enable = true;
+
+  # NVIDIA GPU
+  hardware.nvidia = {
+    package = (unstable.linuxPackagesFor config.boot.kernelPackages.kernel).nvidiaPackages.stable;
+
+    dynamicBoost.enable = true;
+    modesetting.enable = true;
+
+    powerManagement = {
+      enable = false;
+      finegrained = false;
+    };
+
+    open = false;
+
+    prime = {
+      sync.enable = true;
+      amdgpuBusId = "PCI:5:0:0";
+      nvidiaBusId = "PCI:1:0:0";
+    };
+  };
+
   services.xserver.videoDrivers = [ "nvidia" ];
-  hardware.cpu.amd.updateMicrocode = lib.mkDefault true;
+
+  # Laptop power management
+  services.power-profiles-daemon.enable = true;
+  services.tlp.enable = false;
+
+  # SSD
+  services.fstrim.enable = true;
+
   hardware.bluetooth = {
     enable = true;
     powerOnBoot = true;
