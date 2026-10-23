@@ -88,10 +88,11 @@ in
   boot.kernel.sysctl."net.ipv4.ip_forward" = 1;
 
   boot.kernelPackages = pkgsStable.linuxPackages_latest;
-  # Extra SSDT working around Lenovo firmware bug:
-  # \_SB.PCI0.GPP0.PEGP.GPS -> NVD1 AE_NOT_FOUND (aborts PEGP._DSM)
+  # ACPI table overrides (initrd upgrade):
+  #  - SSDT1..18 passthrough + patched SSDT19: drop duplicate WLAN._DSM/_S0W
+  #  - nvd1.aml: alias \_SB.PCI0.LPC0.EC0.NVD1 for PEGP.GPS
   boot.initrd.prepend = [
-    "${pkgsStable.callPackage ./acpi-nvd1-fix { }}/acpi-nvd1-fix.cpio"
+    "${pkgsStable.callPackage ./acpi-overrides { }}/acpi-overrides.cpio"
   ];
 
   #boot.kernelPackages = pkgsStable.linuxPackages_6_18;
@@ -121,8 +122,19 @@ in
     # thumbdrive
     ACTION=="add", SUBSYSTEM=="block", ENV{DEVTYPE}=="partition", ENV{ID_FS_TYPE}=="vfat", ENV{ID_SERIAL_SHORT}=="${usbSerial}", RUN{program}+="${pkgs.systemd}/bin/systemd-mount --no-block --collect --bind-device --options=rw,nosuid,nodev,noexec,uid=0,gid=${toString usbGid},dmask=007,fmask=117,utf8=1,shortname=mixed $devnode ${mountPoint}"
     ACTION=="remove", SUBSYSTEM=="block", ENV{DEVTYPE}=="partition", ENV{ID_SERIAL_SHORT}=="${usbSerial}", RUN{program}+="${pkgs.systemd}/bin/systemd-umount ${mountPoint}"
+
+    # drm
+    SUBSYSTEM=="drm", KERNEL=="card[0-9]*", ENV{DEVNAME}=="/dev/dri/card*", DRIVERS=="nvidia", SYMLINK+="dri/nvidia"
   '';
-  services.udev.packages = [ pkgsStable.yubikey-personalization ];
+  services.udev.packages = [
+    pkgsStable.yubikey-personalization 
+    (pkgs.writeTextDir "etc/udev/rules.d/70-psvr2.rules" ''
+      # Sony PS VR2 headset (USB) and Sense controllers (USB 0003 / Bluetooth 0005, L 0E45 / R 0E46)
+      SUBSYSTEM=="usb", ATTR{idVendor}=="054c", ATTR{idProduct}=="0cde", TAG+="uaccess", MODE="0660"
+      KERNEL=="hidraw*", KERNELS=="000[35]:054C:0E4[56].*", TAG+="uaccess", MODE="0660"
+    '')
+  ];
+
   services.yubikey-agent.enable = true;
 
   programs.gnupg.agent = {
@@ -148,6 +160,24 @@ in
   programs.hyprland.enable = true;
   programs.xwayland.enable = true;
 
+  #boot.plymouth = {
+  #  enable = true;
+  #  theme = "breeze";
+  #};
+  #boot.consoleLogLevel = 3;
+  #boot.initrd.verbose = false;
+  hardware.cpu.amd.updateMicrocode = true;
+  boot.kernelParams = [
+    "amd_pstate=active"
+    "amdgpu.sg_display=1"
+    "kvm_amd.avic=0"
+    #"quiet"
+    #"rd.udev.log_level=3"
+    #"udev.log_priority=3"
+    #"rd.systemd.show_status=auto"
+  ];
+  systemd.settings.Manager.RebootWatchdogSec = "0";
+  boot.loader.systemd-boot.consoleMode = "1";
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.efiSysMountPoint = "/efi";
   boot.loader.systemd-boot.xbootldrMountPoint = "/boot";
@@ -167,7 +197,6 @@ in
     # forces wayland in some apps (Electron, Chrome)
     NIXOS_OZONE_WL = "1";
     ELECTRON_OZONE_PLATFORM_HINT = "auto";
-    __NV_PRIME_RENDER_OFFLOAD = "1";
     __GLX_VENDOR_LIBRARY_NAME = "nvidia";
   };
 
@@ -430,7 +459,7 @@ in
           enable = true;
           settings = rec {
             initial_session = {
-              command = "start-hyprland";
+              command = "start-hyprland > /dev/null 2>&1";
               user = "boogie";
             };
             default_session = initial_session;
@@ -469,6 +498,7 @@ in
     byda = {
      inheritParentConfig = true;
      configuration = {
+       imports = [ (builtins.getFlake "github:egbaydarov/slopvr").nixosModules.default ];
        #imports = [
        #  (builtins.getFlake "path:/home/byda/stuff/fluxcast").nixosModules.fluxcast
        #];
@@ -542,6 +572,8 @@ in
         networking.wg-quick.interfaces.wgru.configFile = config.age.secrets.wgru.path;
         networking.wg-quick.interfaces.wgvisi.configFile = config.age.secrets.wgvisi.path;
         systemd.services.NetworkManager-wait-online.enable = false;
+        services.slopvr.enable = true;
+
         networking.firewall = {
           enable = true;
           allowedUDPPorts = [];
@@ -558,7 +590,7 @@ in
           enable = true;
           settings = rec {
             initial_session = {
-              command = "start-hyprland";
+              command = "start-hyprland > /dev/null 2>&1";
               user = "byda";
             };
             default_session = initial_session;

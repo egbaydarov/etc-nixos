@@ -8,13 +8,6 @@ in
 {
   imports = [
     (modulesPath + "/installer/scan/not-detected.nix")
-    #"${builtins.fetchGit {url=https://github.com/NixOS/nixos-hardware.git;rev="9154f4569b6cdfd3c595851a6ba51bfaa472d9f3";}}/lenovo/legion/16aph8"
-  ];
-
-  hardware.cpu.amd.updateMicrocode = true;
-  boot.kernelParams = [
-    "amd_pstate=active"
-    "amdgpu.sg_display=1"
   ];
 
   # AMD GPU
@@ -53,6 +46,7 @@ in
   services.fstrim.enable = true;
 
   hardware.bluetooth = {
+    input = { General = { ClassicBondedOnly = false; }; };
     enable = true;
     powerOnBoot = true;
     settings = {
